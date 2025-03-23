@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { 
   View, Text, TouchableOpacity, Image, ScrollView, SafeAreaView, Alert 
 } from "react-native";
@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { addToCart } from "../redux/CartReducer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { validateToken } from "../helpers/validate-token";
+import Headings from "../components/home/Headings";
 
 const ProductDetail = ({ route, navigation }) => {
   const { item } = route.params;
@@ -17,7 +18,18 @@ const ProductDetail = ({ route, navigation }) => {
   const dispatch = useDispatch();
   const cart = useSelector((state) => state.cart.cart);
   console.log("cart in ProductDetail:", cart);
-
+  const [username, setUsername] = useState("");
+  useEffect(() => {
+    const fetchUsername = async () => {
+      try {
+        const userName = await AsyncStorage.getItem("username");
+        setUsername(userName || "Guest"); // Nếu không có username, dùng "Guest"
+      } catch (error) {
+        console.log("Error fetching username:", error);
+      }
+    };
+    fetchUsername();
+  }, []);
   // Xử lý tăng số lượng
   const incrementCount = () => {
     if (count < item.stock) {
@@ -49,11 +61,15 @@ const ProductDetail = ({ route, navigation }) => {
       setAddedToCart(false);
     }, 3000); // Giảm thời gian thông báo
   };
-
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem("authToken");
+    await AsyncStorage.removeItem("username");
+    navigation.replace("LoginScreen");
+  };
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        
+      <Headings username={username} handleLogout={handleLogout} />
         {/* Header */}
         <View style={styles.upperRow}>
           <TouchableOpacity onPress={() => navigation.goBack()}>

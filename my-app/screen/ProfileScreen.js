@@ -7,6 +7,8 @@ import {
   FlatList,
   StyleSheet,
   ScrollView,
+  Modal,
+  Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
@@ -16,8 +18,9 @@ import API_URLS from "../helpers/config";
 
 // 🔹 Cấu hình trạng thái đơn hàng
 const STATUS_CONFIG = {
-  pending: { icon: "🕒", text: "Chờ xác nhận", color: "#FFA500" },
-  success: { icon: "✅", text: "Đã mua", color: "#28A745" },
+  Pending: { icon: "🕒", text: "Chờ xác nhận", color: "#FFA500" },
+  Shipped: { icon: "🚚", text: "Đang giao", color: "#FFA500" },
+  Completed: { icon: "✅", text: "Đã mua", color: "#28A745" },
   failed: { icon: "❌", text: "Đã hủy", color: "#DC3545" },
 };
 
@@ -65,27 +68,40 @@ const PaymentFilterButton = React.memo(({ method, selected, onPress }) => (
 ));
 
 // 🔹 Component Danh Sách Đơn Hàng
-const OrderList = React.memo(({ orders }) => {
+const OrderList = React.memo(({ orders, onShowCancelModal }) => {
   const navigation = useNavigation();
   return (
     <FlatList
       data={orders}
       keyExtractor={(item) => item._id}
       renderItem={({ item }) => (
-        <TouchableOpacity
-          style={styles.orderBox}
-          onPress={() => navigation.navigate("Order", { orderId: item._id })}
-        >
-          <Text style={styles.orderText}>Mã đơn: {item._id}</Text>
-          <Text style={styles.orderText}>Tổng tiền: {item.totalPrice} VND</Text>
-          <Text style={styles.orderText}>Thanh toán: {item.paymentMethod.toUpperCase()}</Text>
-          <Text style={[styles.orderText, { color: STATUS_CONFIG[item.status].color }]}>
-            Trạng thái: {STATUS_CONFIG[item.status].text}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.orderBox}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Order", { orderId: item._id })}
+          >
+            <Text style={styles.orderText}>Mã đơn: {item._id}</Text>
+            <Text style={styles.orderText}>Tổng tiền: {item.totalPrice} VND</Text>
+            <Text style={styles.orderText}>Thanh toán: {item.paymentMethod.toUpperCase()}</Text>
+            <Text style={[styles.orderText, { color: STATUS_CONFIG[item.status].color }]}>
+              Trạng thái: {STATUS_CONFIG[item.status].text}
+            </Text>
+          </TouchableOpacity>
+          {item.status === "Pending" && (
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => onShowCancelModal(item._id)}
+            >
+              <Text style={styles.cancelButtonText}>Hủy đơn hàng</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       )}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
-      ListEmptyComponent={<Text style={styles.noOrders}>Không có đơn hàng nào.</Text>}
+      ListEmptyComponent={() => (
+        <Text style={{ fontSize: 18, marginTop: 10, fontWeight: "bold", textAlign: "center" }}>
+          Không tìm thấy thông tin đơn hàng.
+        </Text>
+      )}
     />
   );
 });
@@ -95,8 +111,13 @@ const ProfileScreen = () => {
   const [user, setUser] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedStatus, setSelectedStatus] = useState("success");
+  const [selectedStatus, setSelectedStatus] = useState("Completed");
   const [selectedPayment, setSelectedPayment] = useState("all");
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [resultModalVisible, setResultModalVisible] = useState(false);
+  const [resultMessage, setResultMessage] = useState("");
+  const [orderToCancel, setOrderToCancel] = useState(null);
+  const fadeAnim = useState(new Animated.Value(0))[0]; // Animation fade
 
   useEffect(() => {
     let mounted = true;
@@ -104,7 +125,6 @@ const ProfileScreen = () => {
       try {
         const userRes = await axios.get(`${API_URLS.ANDROID}/users/${userId}`);
         const ordersRes = await axios.get(`${API_URLS.ANDROID}/orders/user/${userId}`);
-
         if (mounted) {
           setUser(userRes.data.user);
           setOrders(ordersRes.data.orders);
@@ -117,23 +137,92 @@ const ProfileScreen = () => {
     };
 
     fetchData();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [userId]);
 
-  const orderCounts = useMemo(() => ({
-    pending: orders.filter((o) => o.status === "pending").length,
-    success: orders.filter((o) => o.status === "success").length,
-    failed: orders.filter((o) => o.status === "failed").length,
-  }), [orders]);
+  // Animation cho modal
+  const showCancelModal = (orderId) => {
+    setOrderToCancel(orderId);
+    setCancelModalVisible(true);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
 
-  const filteredOrders = useMemo(() => 
-    orders.filter((order) => 
-      order.status === selectedStatus &&
-      (selectedPayment === "all" || order.paymentMethod.toLowerCase() === selectedPayment.toLowerCase())
-    ),
+  const hideCancelModal = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => setCancelModalVisible(false));
+  };
+
+  const showResultModal = (message) => {
+    setResultMessage(message);
+    setResultModalVisible(true);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+    setTimeout(hideResultModal, 2000); // Tự động đóng sau 2 giây
+  };
+
+  const hideResultModal = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => setResultModalVisible(false));
+  };
+  // Hủy đơn hàng
+  const confirmCancelOrder = useCallback(async () => {
+    try {
+      const response = await axios.put(`${API_URLS.ANDROID}/orders/${orderToCancel}`, {
+        status: "failed",
+      });
+      if (response.status === 200) {
+        setOrders((prevOrders) =>
+          prevOrders.map((order) =>
+            order._id === orderToCancel ? { ...order, status: "failed" } : order
+          )
+        );
+        hideCancelModal();
+        showResultModal("Đơn hàng đã được hủy thành công!")
+      }
+    } catch (error) {
+      console.error("Lỗi khi hủy đơn hàng:", error.response?.data || error.message);
+      hideCancelModal();
+      showResultModal("Không thể hủy đơn hàng. Vui lòng thử lại!");
+    }
+  }, [orderToCancel]);
+
+
+  const orderCounts = useMemo(
+    () => ({
+      Pending: orders.filter((o) => o.status === "Pending").length,
+      Shipped: orders.filter((o) => o.status === "Shipped").length,
+      Completed: orders.filter((o) => o.status === "Completed").length,
+      failed: orders.filter((o) => o.status === "failed").length,
+    }),
+    [orders]
+  );
+
+  const filteredOrders = useMemo(
+    () =>
+      orders.filter(
+        (order) =>
+          order.status === selectedStatus &&
+          (selectedPayment === "all" ||
+            order.paymentMethod.toLowerCase() === selectedPayment.toLowerCase())
+      ),
     [orders, selectedStatus, selectedPayment]
   );
-console.log({selectedPayment})
+
   if (loading)
     return (
       <View style={styles.center}>
@@ -183,8 +272,50 @@ console.log({selectedPayment})
           <Text style={styles.sectionTitle}>
             {STATUS_CONFIG[selectedStatus].icon} Đơn hàng {STATUS_CONFIG[selectedStatus].text}
           </Text>
-          <OrderList orders={filteredOrders} />
+          <OrderList orders={filteredOrders} onShowCancelModal={showCancelModal} />
         </View>
+
+        {/* Modal xác nhận hủy đơn hàng với animation */}
+        <Modal transparent={true} visible={cancelModalVisible} onRequestClose={hideCancelModal}>
+          <View style={styles.popupOverlay}>
+            <Animated.View style={[styles.popupContainer, { opacity: fadeAnim }]}>
+              <Text style={styles.popupTitle}>Xác nhận hủy đơn hàng</Text>
+              <Text style={styles.popupMessage}>
+                Bạn có chắc muốn hủy đơn hàng này không?
+              </Text>
+              <View style={styles.popupButtons}>
+                <TouchableOpacity
+                  onPress={confirmCancelOrder}
+                  style={[styles.popupButton, { backgroundColor: "#28A745" }]}
+                >
+                  <Text style={styles.popupButtonText}>Có</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={hideCancelModal}
+                  style={[styles.popupButton, { backgroundColor: "#DC3545" }]}
+                >
+                  <Text style={styles.popupButtonText}>Không</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </View>
+        </Modal>
+
+        <Modal transparent={true} visible={resultModalVisible} onRequestClose={hideResultModal}>
+          <View style={styles.popupOverlay}>
+            <Animated.View
+              style={[
+                styles.popupContainer,
+                {
+                  opacity: fadeAnim,
+                  backgroundColor: resultMessage.includes("thành công") ? "#28A745" : "#DC3545",
+                },
+              ]}
+            >
+              <Text style={[styles.popupTitle, { color: "white" }]}>{resultMessage}</Text>
+            </Animated.View>
+          </View>
+        </Modal>
       </View>
     </ScrollView>
   );
@@ -205,4 +336,65 @@ const styles = StyleSheet.create({
   paymentFilter: { flexDirection: "row", justifyContent: "center", marginBottom: 15, gap: 10 },
   paymentButton: { padding: 8, borderWidth: 1, borderRadius: 5, borderColor: "#ddd", alignItems: "center" },
   selectedPayment: { backgroundColor: "#28A745", borderColor: "#28A745" },
+  orderBox: {
+    padding: 15,
+    borderWidth: 1,
+    borderRadius: 8,
+    borderColor: "#ddd",
+    backgroundColor: "#f9f9f9",
+    marginBottom: 15,
+  },
+  orderText: { fontSize: 16, marginVertical: 2 },
+  cancelButton: {
+    marginTop: 10,
+    padding: 8,
+    backgroundColor: "#DC3545",
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  cancelButtonText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  section: { paddingHorizontal: 10 },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
+  popupOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  popupContainer: {
+    width: "80%",
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  popupTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  popupMessage: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  popupButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  popupButton: {
+    padding: 10,
+    borderRadius: 5,
+    width: "45%",
+    alignItems: "center",
+  },
+  popupButtonText: {
+    color: "white",
+    fontWeight: "bold",
+  },
 });

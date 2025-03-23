@@ -59,7 +59,7 @@ exports.createProduct = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, stock } = req.body;
+    const { name, price, stock,status } = req.body;
 
     // Kiểm tra ID hợp lệ
     if (!id.match(/^[0-9a-fA-F]{24}$/)) {
@@ -73,7 +73,7 @@ exports.updateProduct = async (req, res) => {
 
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
-      { name, price, stock },
+      { name, price, stock,status },
       { new: true, runValidators: true }
     );
 

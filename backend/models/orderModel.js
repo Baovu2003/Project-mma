@@ -8,6 +8,11 @@ const orderSchema = new mongoose.Schema({
   },
   products: [
     {
+      _id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product", // Liên kết với bảng Product
+        required: true,
+      },
       name: {
         type: String,
         required: true,
@@ -61,7 +66,7 @@ const orderSchema = new mongoose.Schema({
     required: true,
   },
   paymentStatus: { type: String, enum: ["success", "failed"], default: "failed" },
-  status: { type: String, enum: ["pending", "success", "failed"], default: "pending" },
+  status: { type: String, enum: ["Pending","Shipped", "Completed", "failed"], default: "Pending" },
   createdAt: {
     type: Date,
     default: Date.now,

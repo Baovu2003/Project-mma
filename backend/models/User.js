@@ -38,6 +38,14 @@ const userSchema = new mongoose.Schema({
       ref: "Order",
     },
   ],
+  role:
+  {
+    type: String,
+    enum: ["admin","user"],
+    default:"user",
+    required: true,
+  },
+
   createdAt: {
     type: Date,
     default: Date.now,

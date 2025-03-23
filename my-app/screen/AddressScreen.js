@@ -114,7 +114,7 @@ const AddressScreen = () => {
     };
 
     try {
-      const response = await axios.post( `${API_URLS.WEB}/addresses/`, {
+      const response = await axios.post( `${API_URLS.ANDROID}/addresses/`, {
         userId,
         address,
       });

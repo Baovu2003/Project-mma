@@ -13,13 +13,19 @@ import { Ionicons } from "@expo/vector-icons";
 // import AddressScreen from "../screens/AddressScreen";
 // import ConfirmationScreen from "../screens/ConfirmationScreen";
 // import OrderScreen from "../screens/OrderScreen";
-import { Cart, Home, LoginScreen, ProductDetail, Profile,RegisterScreen } from "../screen";
+import {
+  Cart,
+  Home,
+  LoginScreen,
+  ProductDetail,
+  Profile,
+  RegisterScreen,
+} from "../screen";
 import ConfirmationScreen from "../screen/ConfirmationScreen";
 import AddAddressScreen from "../screen/AddAddressScreen";
 import AddressScreen from "../screen/AddressScreen";
 import OrderScreen from "../screen/OrderScreen";
 import SuccessScreen from "../helpers/success";
-
 
 const StackNavigator = () => {
   const Stack = createNativeStackNavigator();
@@ -49,6 +55,7 @@ const StackNavigator = () => {
           options={{
             tabBarLabel: "Profile",
             tabBarLabelStyle: { color: "#008E97" },
+            headerShown: false,
             tabBarIcon: ({ focused }) =>
               focused ? (
                 <Ionicons name="person" size={24} color="#008E97" />
@@ -86,11 +93,11 @@ const StackNavigator = () => {
   };
   return (
     <NavigationContainer linking={linking}>
-       <Stack.Screen
-      name="SuccessScreen"
-      component={SuccessScreen}
-      options={{ headerShown: false }}
-    />
+      <Stack.Screen
+        name="SuccessScreen"
+        component={SuccessScreen}
+        options={{ headerShown: false }}
+      />
       <Stack.Navigator>
         <Stack.Screen
           name="LoginScreen"
@@ -113,6 +120,12 @@ const StackNavigator = () => {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="Cart"
+          component={Cart}
+          options={{ headerShown: false }}
+        />
+
+        <Stack.Screen
           name="Address"
           component={AddAddressScreen}
           options={{ headerShown: false }}
@@ -133,7 +146,11 @@ const StackNavigator = () => {
           component={OrderScreen}
           options={{ headerShown: false }}
         />
-          <Stack.Screen name="SuccessScreen" component={SuccessScreen} options={{ headerShown: false }} />
+        <Stack.Screen
+          name="SuccessScreen"
+          component={SuccessScreen}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

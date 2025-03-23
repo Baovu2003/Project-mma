@@ -298,7 +298,7 @@ function Home() {
         visible={modalVisible}
         onTouchOutside={() => setModalVisible(!modalVisible)}
       >
-        <ModalContent style={{ width: "100%", height: 400 }}>
+        <ModalContent style={{ width: "100%", height: 300 }}>
           <View style={{ marginBottom: 8 }}>
             <Text style={{ fontSize: 16, fontWeight: "500" }}>
               Choose your Location
@@ -406,36 +406,6 @@ function Home() {
               </Text>
             </Pressable>
           </ScrollView>
-
-          <View style={{ flexDirection: "column", gap: 7, marginBottom: 30 }}>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
-            >
-              <Entypo name="location-pin" size={22} color="#0066b2" />
-              <Text style={{ color: "#0066b2", fontWeight: "400" }}>
-                Enter an Indian pincode
-              </Text>
-            </View>
-
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
-            >
-              <Ionicons name="locate-sharp" size={22} color="#0066b2" />
-              <Text style={{ color: "#0066b2", fontWeight: "400" }}>
-                Use My Currect location
-              </Text>
-            </View>
-
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
-            >
-              <AntDesign name="earth" size={22} color="#0066b2" />
-
-              <Text style={{ color: "#0066b2", fontWeight: "400" }}>
-                Deliver outside India
-              </Text>
-            </View>
-          </View>
         </ModalContent>
       </BottomModal>
     </>
